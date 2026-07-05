@@ -44,7 +44,7 @@ async def _send_heartbeat(worker_id: str, active_jobs: int) -> None:
     try:
         async with httpx.AsyncClient(timeout=5) as client:
             await client.post(
-                f"http://localhost:8000/api/workers/{worker_id}/heartbeat",
+                f"{settings.API_BASE_URL}/api/workers/{worker_id}/heartbeat",
                 json={"active_jobs": active_jobs, "concurrency": settings.WORKER_CONCURRENCY},
             )
     except Exception as exc:  # heartbeat failures shouldn't crash the worker

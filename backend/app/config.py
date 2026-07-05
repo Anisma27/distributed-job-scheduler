@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     SCHEDULER_TICK_SECONDS: float = 2.0
 
     # --- Worker process ---
+    API_BASE_URL: str = "http://localhost:8000"
     WORKER_ID: str = "worker-local"
     WORKER_CONCURRENCY: int = 4
     WORKER_POLL_INTERVAL_SECONDS: float = 1.0
