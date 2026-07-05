@@ -4,6 +4,15 @@ A production-inspired distributed job scheduling platform: REST API, worker
 service with atomic job claiming, retry/backoff, dead-letter handling, and a
 live dashboard.
 
+## Live demo
+
+- **Dashboard:** https://distributed-job-scheduler-2.onrender.com
+- **API docs (Swagger):** https://distributed-job-scheduler-16ey.onrender.com/docs
+
+Deployed on Render's free tier — services may take ~30-50s to wake up after
+inactivity. On first visit to the dashboard, register a new account; the API
+base URL should already be pre-filled correctly.
+
 ```
 distributed-job-scheduler/
 ├── backend/
