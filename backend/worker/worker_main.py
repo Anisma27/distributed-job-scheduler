@@ -12,9 +12,12 @@ Usage:
 """
 import asyncio
 import logging
+import os
 import signal
 import time
 from datetime import datetime, timedelta, timezone
+from http.server import BaseHTTPRequestHandler, HTTPServer
+from threading import Thread
 
 import httpx
 from sqlalchemy import select
@@ -174,7 +177,30 @@ async def worker_loop(stop: GracefulShutdown) -> None:
         logger.info("Worker %s stopped", worker_id)
 
 
+def _start_dummy_health_server() -> None:
+    """Render's free Web Service tier requires an open port to health-check.
+    This worker doesn't need to receive real traffic, so we just bind a
+    minimal HTTP server that always returns 200 OK, to satisfy the port scan.
+    """
+    port = int(os.environ.get("PORT", "10000"))
+
+    class _Handler(BaseHTTPRequestHandler):
+        def do_GET(self) -> None:  # noqa: N802
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(b"ok")
+
+        def log_message(self, *_args) -> None:  # silence default request logging
+            pass
+
+    server = HTTPServer(("0.0.0.0", port), _Handler)
+    thread = Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    logger.info("Dummy health server listening on port %s (Render port-scan requirement)", port)
+
+
 def main() -> None:
+    _start_dummy_health_server()
     stop = GracefulShutdown()
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
