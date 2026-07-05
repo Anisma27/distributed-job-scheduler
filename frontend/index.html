@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Scheduler Control</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+</head>
+<body>
+
+  <!-- ============ AUTH SCREEN ============ -->
+  <div id="auth-screen" class="auth-screen">
+    <div class="auth-card">
+      <div class="auth-brand">
+        <span class="pulse-dot"></span>
+        <span class="brand-word">SCHEDULER</span><span class="brand-word-accent">CONTROL</span>
+      </div>
+
+      <div class="auth-tabs">
+        <button class="auth-tab active" data-tab="login">Sign in</button>
+        <button class="auth-tab" data-tab="register">Create account</button>
+      </div>
+
+      <form id="login-form" class="auth-form">
+        <label>Email<input type="email" id="login-email" required autocomplete="username" /></label>
+        <label>Password<input type="password" id="login-password" required autocomplete="current-password" /></label>
+        <div class="api-base-row">
+          <label>API base URL<input type="text" id="api-base-login" placeholder="http://localhost:8000" /></label>
+        </div>
+        <button type="submit" class="btn-primary">Sign in</button>
+        <p class="auth-error" id="login-error"></p>
+      </form>
+
+      <form id="register-form" class="auth-form hidden">
+        <label>Full name<input type="text" id="reg-name" required /></label>
+        <label>Organization<input type="text" id="reg-org" required /></label>
+        <label>Email<input type="email" id="reg-email" required autocomplete="username" /></label>
+        <label>Password<input type="password" id="reg-password" required minlength="8" autocomplete="new-password" /></label>
+        <div class="api-base-row">
+          <label>API base URL<input type="text" id="api-base-register" placeholder="http://localhost:8000" /></label>
+        </div>
+        <button type="submit" class="btn-primary">Create account</button>
+        <p class="auth-error" id="register-error"></p>
+      </form>
+    </div>
+  </div>
+
+  <!-- ============ MAIN APP ============ -->
+  <div id="app" class="app hidden">
+    <aside class="sidebar">
+      <div class="brand">
+        <span class="pulse-dot"></span>
+        <span class="brand-word">SCHEDULER</span><span class="brand-word-accent">CONTROL</span>
+      </div>
+
+      <nav class="nav">
+        <button class="nav-item active" data-view="overview">Overview</button>
+        <button class="nav-item" data-view="queues">Queues</button>
+        <button class="nav-item" data-view="jobs">Jobs</button>
+        <button class="nav-item" data-view="workers">Workers</button>
+        <button class="nav-item" data-view="deadletter">Dead letter</button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <label class="project-select-label">Project
+          <select id="project-select"></select>
+        </label>
+        <button id="new-project-btn" class="btn-ghost">+ New project</button>
+        <button id="logout-btn" class="btn-ghost logout">Sign out</button>
+      </div>
+    </aside>
+
+    <main class="main">
+
+      <!-- OVERVIEW -->
+      <section id="view-overview" class="view active">
+        <header class="view-header">
+          <h1>System health</h1>
+          <p class="view-sub">Live status across every queue and worker in this project.</p>
+        </header>
+
+        <div class="health-strip" id="health-strip">
+          <div class="health-cell" data-metric="jobs_queued"><span class="health-num">–</span><span class="health-label">Queued</span></div>
+          <div class="health-cell" data-metric="jobs_running"><span class="health-num">–</span><span class="health-label">Running</span></div>
+          <div class="health-cell" data-metric="jobs_completed_last_hour"><span class="health-num">–</span><span class="health-label">Completed / 1h</span></div>
+          <div class="health-cell" data-metric="jobs_failed_last_hour"><span class="health-num">–</span><span class="health-label">Failed / 1h</span></div>
+          <div class="health-cell" data-metric="dead_letter_count"><span class="health-num">–</span><span class="health-label">Dead letter</span></div>
+          <div class="health-cell" data-metric="total_workers_online"><span class="health-num">–</span><span class="health-label">Workers online</span></div>
+        </div>
+
+        <div class="panel">
+          <h2>Throughput</h2>
+          <canvas id="throughput-chart" height="90"></canvas>
+        </div>
+      </section>
+
+      <!-- QUEUES -->
+      <section id="view-queues" class="view">
+        <header class="view-header">
+          <h1>Queues</h1>
+          <p class="view-sub">Configure priority, concurrency, and retry behavior per queue.</p>
+          <button id="new-queue-btn" class="btn-primary">+ New queue</button>
+        </header>
+        <div id="queues-list" class="queues-list"></div>
+      </section>
+
+      <!-- JOBS -->
+      <section id="view-jobs" class="view">
+        <header class="view-header">
+          <h1>Jobs</h1>
+          <p class="view-sub">Inspect the lifecycle of every job across a queue.</p>
+        </header>
+
+        <div class="jobs-toolbar">
+          <label>Queue
+            <select id="jobs-queue-select"></select>
+          </label>
+          <label>Status
+            <select id="jobs-status-filter">
+              <option value="">All</option>
+              <option value="scheduled">Scheduled</option>
+              <option value="queued">Queued</option>
+              <option value="claimed">Claimed</option>
+              <option value="running">Running</option>
+              <option value="completed">Completed</option>
+              <option value="failed">Failed</option>
+              <option value="dead_letter">Dead letter</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+          </label>
+          <button id="new-job-btn" class="btn-primary">+ New job</button>
+        </div>
+
+        <div id="jobs-table-wrap"></div>
+        <div class="pagination" id="jobs-pagination"></div>
+      </section>
+
+      <!-- WORKERS -->
+      <section id="view-workers" class="view">
+        <header class="view-header">
+          <h1>Workers</h1>
+          <p class="view-sub">Every worker process that has sent a heartbeat.</p>
+        </header>
+        <div id="workers-list" class="workers-list"></div>
+      </section>
+
+      <!-- DEAD LETTER -->
+      <section id="view-deadletter" class="view">
+        <header class="view-header">
+          <h1>Dead letter queue</h1>
+          <p class="view-sub">Jobs that exhausted every retry. Inspect, then requeue if the cause is fixed.</p>
+        </header>
+        <div class="jobs-toolbar">
+          <label>Queue
+            <select id="dlq-queue-select"></select>
+          </label>
+        </div>
+        <div id="dlq-list"></div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ============ MODALS ============ -->
+  <div id="modal-backdrop" class="modal-backdrop hidden">
+    <div class="modal" id="modal-content"></div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>

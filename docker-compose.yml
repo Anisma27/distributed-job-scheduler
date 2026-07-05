@@ -1,0 +1,71 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: scheduler_user
+      POSTGRES_PASSWORD: scheduler_pass
+      POSTGRES_DB: scheduler_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U scheduler_user -d scheduler_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: postgresql+asyncpg://scheduler_user:scheduler_pass@postgres:5432/scheduler_db
+      JWT_SECRET_KEY: change-this-to-a-long-random-string
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  worker-1:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.worker
+    environment:
+      DATABASE_URL: postgresql+asyncpg://scheduler_user:scheduler_pass@postgres:5432/scheduler_db
+      WORKER_ID: worker-1
+      WORKER_CONCURRENCY: "4"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      api:
+        condition: service_started
+
+  worker-2:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.worker
+    environment:
+      DATABASE_URL: postgresql+asyncpg://scheduler_user:scheduler_pass@postgres:5432/scheduler_db
+      WORKER_ID: worker-2
+      WORKER_CONCURRENCY: "4"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      api:
+        condition: service_started
+
+  frontend:
+    image: python:3.12-slim
+    working_dir: /site
+    volumes:
+      - ./frontend:/site
+    command: ["python", "-m", "http.server", "3000"]
+    ports:
+      - "3000:3000"
+
+volumes:
+  pgdata:
